@@ -1,0 +1,20 @@
+
+
+
+
+In our framework we take advantage of the similarties between the profiles of different regions to fraction the problem. We fraction it not only on the profiles and proportion part but also for regionally. 
+Each region is solved with seperatly where the connected regions act as priors on its profile matrix.
+At stage $t+1$ we update $ \H_r^{t+1} $ using the profiles of the other related regions.
+
+\begin{equation*}
+    \label{eq-multi}
+    \begin{aligned}
+        & \underset{\cal{\H_r}}{\text{min}}  
+        & & \| X^r - W^r \H^r \|_F^2+ \sum_{r \neq s}
+   \lambda_{r , s} \| \H^r - \H^s \|_F^2  \\
+        & \text{subject to} &
+        & & & H^r_{j,d} \geq 0 \;\;\forall j, d \\
+    \end{aligned}
+\end{equation*}
+
+

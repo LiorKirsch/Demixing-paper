@@ -1,0 +1,167 @@
+
+\newcommand{\x}{\mathbf{x}}
+\renewcommand{\c}{\mathbf{c}}
+\renewcommand{\H}{\mathbf{C}}
+\newcommand{\Htext}{{C}}
+\newcommand{\paren}[1]{\left({#1}\right)}
+\newcommand{\brackets}[1]{\left[{#1}\right]}
+\newcommand{\norm}[1]{\|{#1}\|}
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}.
+
+Our probabilistic model assumes that samples taken from the same brain region share common underlying factors, each factor reflecting the expression profile in an isolated cell type. The model also assumes that the expression profiles of different brain regions are similar but not identical, and therefore we aim to jointly learn all cell-type profiles of all regions. We start by describing a  probabilistic mixture model for samples from a single brain region, which we extend to the multi-region case in section 2.2.
+
+\subsection{Model of a single brain region}
+% ---------------------------------
+Let $\{\x_1, \ldots, \x_n\} \in \reals^d$ be a set of transcriptome samples. Our model assumes that each sample $\x_i$ is obtained from a noisy mixture of $K$ cell types, each having its own profile $\{\c_1, \ldots \c_K \}\in \reals^d$.
+
+We model each sample $x_i$ as a noisy mixture
+\begin{equation*}
+ \x_i = \sum_{k=1}^K p_{ik} \c_k + \xi_i \quad\forall i \quad,
+\end{equation*}
+where $p_{ik}$ is the proportion of the cell type $k$ in the sample $i$, $\sum_k p_{ik} = 1, \forall i$, and $\xi_i \sim N(0,\sigma^2)$ is additive Gaussian noise independent at each sample. We further assume a Gaussian prior distribution $p_0( \c_1, \ldots, \c_K)$ over each cell type $ \c_k  \sim N(\mu_k, \Sigma) $, and over the mixture proportions $p_0(p_1, \ldots p_K)$. The parameters $\mu_k$ and $\Sigma$ can be estimated in advance from available measurements of expression in isolated cell types.
+
+Together, the probability of an observed sample $x_i$ is
+\begin{equation*}
+    P(\x_1,\ldots,\x_n | \{\c_k\}, \{p_{ik}\}) =  \frac{1}{2\pi\sigma} \exp\left(-\frac{1}{2\sigma} (x_i - \sum_{k=1}^K p_{ik} \c_k)^2 \right)
+\end{equation*}
+and the minus log posterior of all the data equals (up to constants)
+\begin{equation*}
+    - log P(\x_1,\ldots,\x_n, \H, P| \mu, \Sigma) =
+    \sum_{i=1}^n \paren{ \frac{1}{\sigma} (x_i - \sum_{k=1}^K p_{ik} \c_k)^2 }
+     + \sum_{k=1}^K (c_k-\mu_k)^T\Sigma^{-1}(c_k-\mu_k)
+\end{equation*}
+
+For shortening, we use matrix notation. We denote by $C$ the $K \times d$ matrix of cell-type profiles whose columns are $\brackets{\c_1, \ldots, \c_K}$, denote by $W$ the $n \times K$ matrix of proportions $p_{ik}$,
+and by $X$ the matrix whose columns are the samples $\brackets{\x_1,..., \x_n}$.
+We obtaining that maximizing the posterior is equivalent to minimizing 
+\begin{equation}
+    \label{eq-single}
+    \min_{\H, W} \norm{X - W \H}_F^2 + \sigma \norm{ \H - M }^2_{(\Sigma^{-1})}
+\end{equation}
+where $\norm{\cdot}_F$ is the Frobenius norm, $M$ is a matrix whose columns are the expected cell-type profiles $\mu_k$ and  $\|\cdot\|_{\Sigma}$ is the norm through a PSD matrix $\Sigma$.
+
+
+\subsection{Multiple regions}
+%-------------------------------
+When modelling samples collected from several brain regions, we assume that expression profiles of an individual cell type vary from one region to another, but remain similar. The strength of the connection between the expression profiles depends on how closely related two brain regions are. For instance, prefrontal cortical regions may be very similar to each other, less similar to dorsal cortical region like the primary visual cortex further less similar to the hippocampus and far less similar to the cerebellum. 
+
+To capture these assumptions our model introduces pair-wise attractive terms between the cell-types of region pairs. The strength of the attraction depends on the relatedness of two brain regions and on a global attraction parameter $\lambda$.
+
+This approach can be seen as a balance between two extremes. On one extreme (zero pairwise attraction, $lambda=0$), demixing from each regions is trained independently. With current datasets, this approach usually has too few samples per regions.  On the other extreme (strong pairwise attraction, $lambda >> 0$), one could treat all samples as being created from a single set of underlying latent factors, as if brain regions are homogeneous in their expression profiles across brain structures. This case has the advantage of larger sample size:  it allows to use samples from all brain regions in estimating the latent factors. This is particularly important in the regime of scarce data we operate in. The downside of this approach is that it wrongly assumes that expression is homogeneous across the brain. 
+
+The approach we propose takes a soft sharing approach, which bridges the two extremes by controlling how profiles of different regions share common traits. Similar soft sharing has often been used in supervised multi-task learning (MTL).
+
+%On the other extremity we can recover the profiles by solving N individual problems, one for each region. Here we gain the benefit of allowing regions to have profiles which are different but we lose
+% We propose to bridge the two by controlling the amount by which we force profiles in different regions to share common traits. 
+
+Formally, given $R$ sets of samples from $R$ regions ${\cal{X}} = \{X^1,\ldots X^R\}$, where $X^r = \{\x^r_1, \ldots, \x^r_{n_r} \}$, we learn $R$ sets of cell-type-specific profiles ${\cal{\H}} = \{\H^1,\ldots, \H^R\}$ and their corresponding proportions ${\cal{W}} = \{ W^1,\ldots W^R\}$. Adding Gaussian potentials over profiles from a pair of regions $\H^r$, $C^s$ with a weight of $\lambda_{r,s}$ amounts to a quadratic term in the log posterior. This therefore yields the following optimization problem: 
+
+%\begin{eqnarray}
+%   \label{eq-multi}
+%    \min_{\cal{\H},\cal{W}} & 
+%   \sum_{r=1}^R  \| X^r - W^r \H^r \|_F^2+ \sum_{r \neq %s}
+%   \lambda_{r , s} \| \H^r - \H^s \|_F^2 \quad ,\quad %\quad \quad \quad \quad \quad \quad \quad\\ \nonumber
+%    \text{subject to}
+%    & W^r_{l,j} \geq 0 \forall j, l\\ \nonumber
+%    & H^r_{j,d} \geq 0 \forall j, d\\ \nonumber
+%    & \sum_j W^i_{l,j} = 1 , \forall l \\ \nonumber
+%\end{eqnarray}
+
+\begin{equation*}
+    \label{eq-multi}
+    \begin{aligned}
+        & \underset{\cal{\H},\cal{W}}{\text{min}}  
+        & & \sum_{r=1}^R  \| X^r - W^r \H^r \|_F^2+ \sum_{r \neq s}
+   \lambda_{r , s} \| \H^r - \H^s \|_F^2  \\
+        & \text{subject to} &
+            & W^r_{l,j} \geq 0 \;\; \forall j, l, \\
+        & & & H^r_{j,d} \geq 0 \;\;\forall j, d \\
+        & & & \sum_j W^i_{l,j} = 1 \;\; \forall l \;. 
+    \end{aligned}
+\end{equation*}
+This problem is convex in each of the variables $\cal{\H}$ and $\cal{W}$ separately, but not jointly convex in both . We discuss below the algorithms we use to optimize it.
+
+
+\section{Optimization}
+% =====================
+We now describe algorithms for optimizing the multi-region problem of \eqref{eq-multi}. We start with reviewing existing approaches for single-region demixing and then discuss multi-region demixing. 
+
+
+% Our problem is well suited for performing block coordinate descent, both on the profiles and proportion matrices and both on the regions. At each iteration, we update the set of coordinates of a single region and freeze the coordinate of the rest of the region. After we update the profile matrices $H_n$ we proceed to update its proportion matrix $W_n$. Then, we cycle through the rest of the region and repeat until we converge. 
+
+\subsection{Single-region demixing}
+The demixing problem of \eqref{eq-single} is separately convex in $\H$ and $\W$ (quadratic objective with linear constraints), but not jointly convex in both. When the prior is discarded, it becomes equivalent to non-negative matrix factorization (NMF) \cite{leenmfs}, which has been intensively studied. Several approaches have been proposed to minimize the NMF objective.
+%
+% For the convergence I think we can claim something similar to:
+% http://bioinformatics.oxfordjournals.org/content/23/12/1495.full
+% In the section:
+% Convergence properties of sparse NMF algorithms
+% http://www.sciencedirect.com/science/article/pii/S0167637799000747#
+Here we tested three methods: Multiplicative updates (MU) \cite{leenmfs}, and three variants of alternative least square (ALS) \cite{lin2007projected,kim2008activeset,kim2011fast}. 
+
+{\bf {Multiplicative updates (MU)}}. Lee and Seung \citet{leenmfs} described an NMF algorithm based on multiplicative updates of W and \Htext. At each step, each coordinate of \Htext (and \W) is multiplied by a non-negative scalar, which gaurantees that non-negativity is maintained: $H_{qj} \leftarrow H_{qj} \frac{(W^TX)_{qj}}{((W^TW)H)_{qj}} \quad
+\forall 1\leq q \leq k, 1\leq j \leq n$ and $W_{iq} \leftarrow W_{iq} \frac{(XH^T)_{iq}}{(W(HH^T))_{iq}} \quad \forall 1\leq i \leq m, 1\leq q \leq k$.
+This procedure is guaranteed to converge \cite{leenmfs,lin2007convergence}. 
+% They showed the objective after these updates is %non-increasing. Although in practice the %muliplcative-update method works well, it was suggest %by Gonzalez and Yin Zhang %\cite{gonzalez2005accelerating}  that the %non-increasing updates may not converge to a %stationary point within realistic time.
+
+{\bf{Alternating least squares}} A second set of approaches to minimize the NMF objective is based on the fact that the optimization problem in \eqref{eq-single} is convex in each of the variables \W (or \Htext), hence one can iterate between efficiently updating \W and updating \Htext. This approach can be viewed as a block-coordinate minimization approach, In ALS, the two matrices are  repeatedly updated using $ W^{t+1} = \argmin_{W \geq 0 } f(W^t, H^t)$ and $H^{t+1} = \argmin_{H \geq 0 } f(W^{t+1},H^t)$. Several different method of solving non negative least squares (NNLS) have been proposed some especially tuned for NMF. \citet{lin2007projected} proposed projected gradient decent with step that is chosen using the Armijo rule. 
+Kim and park \cite{kim2008activeset,kim2011fast} use an active set method to solve NNLS. They group their variables to an active set and a passive set and 
+exchange variables between the two to find the optimal sets. Variables are added to the passive set (the set of strictly positive variables) if they improve the score. Notice that if the passive set was known in advance, then an NNLS problem is a simple unconstrained least squares. Another variant of this concept is done by the "the block pivoting method" which allows to change multiple variable between groups per iteration (as appose to a single variable using the active set method). {\bf{THE ALS SECTION SHOULD BE MUCH SHORTER}}
+
+In \eqref{eq-single} the rows of \W are constrained to sum to one. This constraint is often relaxed during optimization since in practice, it can be replaced with a simple heuristic of normalizing each row of W after the optimization is completed. 
+
+{\bf{Move to the experiments section? Also fix the 1st sentence}} Since NMF is a non-convex problem bench-marked a couple of methods on our problem. We wanted to test if when initialized using the same starting points they will perform differently. We tested 4 optimization techniques and found that all performed better with more samples. When the number of sample is sufficiently large we did not observe much difference in the performance of the different methods. while in a small number of samples the block-pivoting and the active-set performed slightly better (both had the same level of performance) Figure \ref{fig:controlled_exp}.
+
+\subsection{Multi-region demixing}
+% ----------------------------------
+The multi-region demixing model of \eqref{eq-multi} uses the known relations among brain region to define similarities between the profiles of different regions. The resulting problem requires to optimize jointly over all regions, taking into account the attractive potentials between profiles of the same cell-type in different regions. 
+
+The strength of pairwise potentials $\lambda_{r,s}$ reflects our prior belief on how strongly cell-type specific expression should be similar in any two given regions. For instance, how similar should be the expression profile of a cortical neuron to a hippocampal neuron.
+We determine the values of $\lambda_{r,s}$ in two steps. First, as a preprocessing step, we used a brain region hierarchy (\figref{tree}) to compute the graph distances between every two regions $d_{r,s}$. {\bf{ Lior, how exactly do you transform the graph distances, to lambdas?}}
+
+
+% ??Gal: Not clear: " We fraction it not only on the profiles and proportion part but also for regionally. 
+% This was already said in the modelling section
+%\begin{equation*}
+%    \label{eq-multi}
+%    \begin{aligned}
+%        & \text{for each region $r$:}  \\
+%        & \underset{\cal{\H_r}}{\text{min}}  
+%        & & \| X^r - W^r \H^r \|_F^2+ \sum_{r \neq s}
+%   \lambda_{r , s} \| \H^r - \H^s \|_F^2  \\
+%        & \text{subject to} &
+%        & \H^r_{j,d} \geq 0 \;\;\forall j, d \\
+%    \end{aligned}
+%\end{equation*}
+
+% This provide us a efficient way to  balance between gaining the more samples per region while not forcing us to use the same exact profile for multiple regions.  <== this was already said in the modelling part.
+
+To optimize \eqref{eq-multi} we took an alternating least square approach, solving separately for ${\cal{H}}$ and ${\cal{\W}}$ of every region. Specifically, we started by demixing each region separately ($\lambda_{r,s}=0 \forall r,s$)
+
+%Specifically, at stage $t+1$ we update the profile matrix of %region r$ \H_r^{t+1} $ using the related profiles as priors.
+
+For the regularizer parameters we use a base $\lambda$ times a 
+We found that it helped to first initialize each of profiles separately (using only the samples from that region). We believe that this helped the profiles to more easily reconstruct their own unique profile.
+We have also experimented with a few method to inforce the constrains on the proportion matrix. while some s
+
+For each region initialize $\W_r$ and $\H_r$ with random values. We initialize $\W$ we values in the range [0,1] and $\H$ with values that are possible for a profile (i.e. profiles can be initialized using a subset of actual samples from the data or some mix of samples). Then prior to starting the loop we warm initialize the profiles by
+
+
+\begin{algorithm}[tb]
+   \caption{Multi-region demixing}
+   \label{alg:multimix}
+   \begin{algorithmic}[1]
+   \STATE {\bfseries input:} training data, max number of steps, $\lambda_{r,s}$, $\mu_1,\ldots\mu_K$, $\Sigma$
+   \STATE {\bfseries initialize:} For each region $r$
+   \STATE \quad Initialize $\W_r$ and $\H_r$ with random values.
+   %\REPEAT
+   \STATE {\bfseries warm-start:} for every region $r$ 
+   \STATE \quad Find optimal $\W^r$ and $\H^r$ for the single-region objective \eqref{eq-single}
+   \REPEAT
+   \STATE Select a region $r$ from a predefined random permutation.
+   \STATE Find optimal $\W^r$ and $\H^r$ for the multi-region objective \eqref{eq-multi}
+   \UNTIL{stopping condition}
+\end{algorithmic}
+\end{algorithm}
+
+
