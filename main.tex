@@ -9,12 +9,10 @@
 \graphicspath{ {images/} }
 \usepackage{algorithm}
 \usepackage{algorithmic}
-
 \usepackage[square,numbers]{natbib}
 \bibliographystyle{unsrtnat}
 
 %\documentstyle[nips14submit_09,times,art10]{article} % For LaTeX 2.09
-
 \title{multi-region demixing of brain transcriptome}
 % \addbibresource{nmf_multi.bib}
 
@@ -24,7 +22,6 @@ Lior Kirsch \\ Bar Ilan university \\ Ramat Gan 52900 Israel \\
 Gal Chechik \\ Bar Ilan university \\ Ramat Gan 52900 Israel \\
 \texttt{gal.chechik@biu.ac.il} \\
 }
-
 \newcommand{\fix}{\marginpar{FIX}}
 \newcommand{\new}{\marginpar{NEW}}
 \newcommand{\reals}{\mathbb{R}}
@@ -32,22 +29,15 @@ Gal Chechik \\ Bar Ilan university \\ Ramat Gan 52900 Israel \\
 \renewcommand{\eqref}[1]{Eq.~(\ref{#1})}
 \newcommand{\figref}[1]{Fig.~(\ref{#1})}
 \newcommand{\figureref}[1]{Figure~(\ref{#1})}
-
 %\nipsfinalcopy % Uncomment for camera-ready version
-
 \begin{document}
 \maketitle
-
 \begin{abstract}
-    Massive measurements of brain gene expression have been collected, but these measurements reflect an uncontrolled mix from various cell types, hindering how much can be gained from brain transcript measurements. We propose here an approach to blindly demix brain transcriptome samples, gaining from variability of cell proportions across samples. We describe a model that takes into account that tissues in different brain structures differ in their expression profiles%, and show how this variability can be accounted for by introducing soft-sharing between cell-type-specific profiles from different brain regions. 
-. Our model exploits this variability by introducing soft-sharing between cell-type-specific profiles from different brain regions. 
-    This multi-region demixing approach is evaluated using RNA-seq profiles measured from multiple regions in human brains. It is validated against ground-truth data of cell-type specific profiles measured in corresponding regions in the mouse brain, showing that soft demixing successfully outperforms baselines of demixing individual regions and demixing when brain structure is ignored. 
+    High quality and large scale measurements of gene expression in the brain have been collected in many species brain regions and ages, but unfortunately, almost all these measurements reflect the expression in an uncontrolled mix from various cell types including neurons glia and blood cells. This fact hinders the insights that can be gained by analyzing datasets of gene expression in the brain. Inferring cell-type specific information from these mixtures is a key challenge. We propose here a probabilistic approach to blindly demix brain transcriptome samples, building on variability of cell-type proportions across samples. We further describe a model that takes into account that tissues in different brain structures differ in their expression profiles by introducing soft-sharing between cell-type-specific profiles from different brain regions. We describe an efficient algorithm to estimate the parameter of the model, as well as techniques to determine some of its hyper parameters from prior knowledge. We study the regimes where multi-region demixing works well using controlled data and evaluate the approach using RNA-seq profiles measured from multiple regions in postmortem human brains. Predictions are validated against ground-truth data of cell-type specific profiles measured in corresponding regions in the mouse brain, showing that soft demixing successfully outperforms baselines of demixing unified and individual regions. 
 \end{abstract}
 
 \section{Introduction}
 \label{introduction}
-
-
 Recent advances in molecular biology techniques allow to measure transcriptome profiles across the brain at unprecedented quality and magnitude. Large datasets of gene expression in the brain are now available, covering  many brain regions, ages and species. RNA sequencing techniques now provides accurate genome-wide counts of transcripts for each gene and splice variant. Unfortunately however, when gene expression profiles is measured in a complex tissue, like the brain, the measured transcripts reflect an uncontrolled mix of expression from multiple cell types including neurons, astrocytes, oligodendrocytes and even blood and immune system cells. This limits the analysis and understanding that can be gained from transcriptome measures of the brain. Although, techniques have been developed to isolate and purify cells of individual types and measure their transcriptome. These techniques are costly and complex, and only a handful of cell-type isolated profiles have been collected so far. 
 
 The current paper proposed a computational technique to demix brain transcriptome measurements. The idea is simple: when multiple samples are collected from the brain, their cellular composition often varies slightly from one sample to another. Each sample therefore reflects mixtures with different proportions of cell types. We propose here to model the transcriptome profiles as a mixture, and describe how the latent component shared across samples can be found.
@@ -74,16 +64,12 @@ This hierarchical structure suggests that when applying demixing to brainomics d
 
 To combine the various sources of prior information, our approach is based on a probabilistic model with three components. First, a set of samples from a single brain regions is represented as a mixture of a smaller number of components. Second, we can include a prior on each of these underlying cell-type-specific profiles based on previous measurements. Third, we add pairwise attractive potentials, pushing expression profiles of related regions to be similar.
  
- 
-
- 
- 
 This paper makes three main novel contributions. First, it describes for the first time a settings of multi-region demixing of transcriptome measurements. Second, it characterizes the regime of parameters where demixing works best in controlled mixtures. Finally, it demonstrates that demixing can uncover latent factors in RNA-seq measurements from multiple human brain regions.
  
 The paper is organized as follows: We start by describing a probabilistic model of expression mix, and describe the demixing optimization problem, and algorithms to solve it. We then describe the multi-region demixing problem, and an algorithm to solve it. In Section 5, we created a controlled mix data to evaluate the regime of parameters where the demixing algorithm works well. 
 
 % ==========================================
-\section{A probabilistic model for demixing}
+\section{A probabilistic model for multi-region demixing}
 \input{method}
 
 % ==========================================
@@ -93,22 +79,16 @@ whole-blood gene expression datasets from kidney transplants. \citet{grange2014c
 
 Joint non negative matrix factorization of several matrices has been previously studied by \citet{lee2009group}. Their formulation introduced  both attractive and repulsive pairwise potentials, optimized using multiplicative updates. A Bayesian group factorization model was presented in \citet{shin2012bayesian}. Somewhat related, is the work by \citet{wang2012group}, who studied matrix factorization where some factors are shared across matrices.
 
-% ==========================================
-\section{Controlled experiments}
-\label{Synthetic_exp}
-\input{synthetic_exp}
+
+\input{experiments}
+
+
 
 % ==========================================
-\section{Human brain data}
-\label{Human_exp}
-\input{human_exp}
-
-
 \section{Summary and future directions}
+We presented a probabilistic model for multi-region demixing approach aiming to estimate cell-type specific expression profiles from expression mixtures. We provide a simple and efficient way to solve it using repeated ALS steps. We find that soft-sharing improves the accuracy of reconstruction as compared to demixing of individual regions, demixing of unified brain and random samples. This was consistent in both controlled samples where the ground truth was known and in postmortem human brains were we validated against mouse cell-type specific profiles.
 
-We presented a multi-region demixing approach aiming to estimate cell-type specific expression profiles from expression mixtures. We find that soft-sharing improves the accuracy of reconstruction as compared to demixing of individual regions, demixing of unified brain and random samples. This was consistent in both controlled samples where the ground truth was known and in postmortem human brains were we validated against mouse cell-type specific profiles.
-
-The results shown above are expect to improve dramatically as further prior information is incorporated into the model. Some of that information is already available, and we will add it in the near future.  Specifically, these include recent new measures of cell-type specific transcriptome from human cells, which can be used to determine the expected profiles $\mu_k$. Furthermore, estimates of coordinated expression among gene pairs can be used to determine the co-variation parameters in the model $\Sigma$. 
+The results shown above are expect to improve dramatically as further prior information is incorporated into the model. Some of that information is already available \cite{darmanis2015survey}, and we will add it in the near future.  Specifically, these include recent new measures of cell-type specific transcriptome from human cells, which can be used to determine the expected profiles $\mu_k$. Furthermore, estimates of coordinated expression among gene pairs can be used to determine the co-variation parameters in the model $\Sigma$.
 As another direction, we expect that profiling might benefit from selecting subsets of genes that are strongly associated with specific cell types, and filtering genes that are not differentially expressed.
 
 
