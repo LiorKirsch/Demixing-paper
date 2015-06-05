@@ -61,27 +61,24 @@ Importantly, collections of transcriptome measurements in the brain have a uniqu
   \end{minipage}
 \end{figure}
 
-This hierarchical structure suggests that when applying demixing to brain-omics data, one should be careful not to treat all brain samples as homogeneously containing the same set of neurons and underlying expressed genes. Instead, we can take into account the relative similarity among brain structures. 
+This hierarchical structure suggests that when applying demixing to brain-omics data, one should be careful not to treat all brain samples as containing a homogeneous set of neurons and underlying expressed genes. Instead, we can take into account the relative similarity among brain structures. 
 
-To combine the various sources of prior information, our approach is based on a probabilistic model with three components. First, a set of samples from a single brain region is represented as a mixture of a smaller number of components. Second, we can include a prior on each of these underlying cell-type-specific profiles based on previous measurements. Third, we add pairwise attractive potentials, pushing expression profiles of related regions to be similar.
+To combine multiple sources of prior information, our approach is based on a probabilistic model with three components. First, a set of samples from a single brain region is represented as a mixture of a smaller number of components. Second, we can include a prior on each of these underlying cell-type-specific profiles based on previous measurements. Third, we add pairwise attractive potentials, pushing expression profiles of related regions to be similar.
  
 This paper makes three main novel contributions. First, it describes for the first time blind demixing and multi-region demixing of transcriptome measurements. Second, it characterizes the regime of parameters where blind demixing works best in controlled mixtures. Finally, it demonstrates that demixing can uncover latent factors in RNA-seq measurements from multiple human brain regions.
  
-%The paper is organized as follows: We start by describing a probabilistic model of expression mix in a single region and and multiple regions. We then describe algorithms to optimize the parameters of the these model. Section 5, evaluate the regime of parameters where the demixing algorithm works well using we a controlled mix dataset that we created. Section 6 evaluates the algorithms in expression dataset from postmortem human brains.
 
 % ==========================================
 \section{A probabilistic model for multi-region demixing}
 \vspace{-10pt}
-
 \newcommand{\x}{\mathbf{x}}
 \renewcommand{\c}{\mathbf{h}}
 \renewcommand{\H}{{H}}
-\newcommand{\Htext}{{C}}
+\newcommand{\Htext}{{H}}
 \newcommand{\paren}[1]{\left({#1}\right)}
 \newcommand{\brackets}[1]{\left[{#1}\right]}
 \newcommand{\norm}[1]{\|{#1}\|}
-\newcommand{\argmin}{\operatornamewithlimits{argmin}}.
-
+\newcommand{\argmin}{\operatornamewithlimits{argmin}}
 Our probabilistic model assumes that samples taken from the same brain region share common underlying factors, each factor reflecting the expression profile of an isolated cell type. The model also assumes that the expression profiles of different brain regions are similar but not identical, and therefore we aim to jointly learn all cell-type profiles of all regions. We start by describing a  probabilistic mixture model for samples from a \em{single} brain region, which we extend to the \em{multi-region} case in section 2.2.
 
 \subsection{Model of a single brain region}
@@ -120,7 +117,7 @@ where $\norm{\cdot}_F$ is the Frobenius norm, $M$ is a matrix whose columns are 
 \subsection{Multiple regions}
 %-------------------------------
 We now turn to extend single-region demixing to handle demixing of samples collected from several brain regions. 
-As far as we are aware, this is the first probabilistic model for demixing multiple sets of samples.
+As far as we know, this is the first probabilistic model for demixing multiple sets.
 
 We assume that expression profiles of an each cell type can vary from one region to another, but is likely to remain similar. The strength of similarity between the expression profiles in two regions depends on how closely related two brain regions are. For instance, neurons in cortical regions may be very similar to each other, less similar to the hippocampal neurons and far less similar to the cerebellar neurons. 
 
@@ -141,7 +138,7 @@ Formally, given sets of samples from $R$ regions ${\cal{X}} = \{X^1,\ldots, X^R\
             & H^r_{j,d} \geq 0 \;\;\forall j, d, r \quad W^r_{l,j} \geq 0 \;\; \forall j, l, r , \quad \sum_j W^r_{l,j} = 1 \;\; \forall l,r \\
     \end{aligned}
 \end{equation}
-Once again the constraints on $\W$ are since these are the mixture proportions, and the constraints on all $\H$ reflect the fact that $\H$ holds counts of transcripts.
+The constraints on $\W$ reflect again that these are the mixture proportions, and the constraints on all $\H$ reflect the fact that $\H$ are transcript counts.
 
 The proposed model is interestingly related to Markov random fields (MRFs). Consider a case where the mixture proportions $\cal{W}$ are given, then the probabilistic model over $\cal{\H}$ can be viewed as an MRF, where nodes correspond to the profiles of individual cell types across all regions $\c^1_1,\ldots, \c^r_k, \ldots \c^R_K$, node potentials reflect the priors $p_0(\c_k)$ based on known expression of individual cell types at various regions, and edge potentials reflect region-to-region similarity terms $\lambda \phi_{r,s}|| \c^r_k - \c^s_k||^2$. 
 
@@ -149,33 +146,30 @@ The next section discusses the algorithms we use to optimize this objective.
 
 \section{Optimization}
 % =====================
-Before we describe an algorithm for optimizing the multi-region problem of \eqref{eq-multi}. We start with reviewing existing approaches for single-region demixing and then discuss multi-region demixing. 
-
-
+Before we describe an algorithm for optimizing the multi-region problem of \eqref{eq-multi} we start with reviewing algorithms for single-region demixing.
 % Our problem is well suited for performing block coordinate descent, both on the profiles and proportion matrices and both on the regions. At each iteration, we update the set of coordinates of a single region and freeze the coordinate of the rest of the region. After we update the profile matrices $H_n$ we proceed to update its proportion matrix $W_n$. Then, we cycle through the rest of the region and repeat until we converge. 
 
-\subsection{Single-region demixing}
-The demixing problem of \eqref{eq-single} is separately convex in $\H$ and $\W$ (quadratic objective with linear constraints), but not jointly convex in both. When the prior is discarded, it becomes equivalent to non-negative matrix factorization (NMF) \cite{leenmfs}, which has been intensively studied. Several approaches have been proposed to minimize the NMF objective.
 %
 % For the convergence I think we can claim something similar to:
 % http://bioinformatics.oxfordjournals.org/content/23/12/1495.full
 % In the section:
 % Convergence properties of sparse NMF algorithms
 % http://www.sciencedirect.com/science/article/pii/S0167637799000747#
-Here we tested four methods: Multiplicative updates (MU) \cite{leenmfs}, and three variants of alternative least square (ANLS) \cite{lin2007projected,kim2008activeset,kim2011fast}. 
 
-{\bf {Multiplicative updates (MU)}}. Lee and Seung \cite{leenmfs} described an NMF algorithm based on multiplicative updates of W and \Htext. At each step, each coordinate of \Htext (and \W) is multiplied by a non-negative scalar, which guarantees that non-negativity is maintained: $H_{qj} \leftarrow H_{qj} \frac{(W^TX)_{qj}}{((W^TW)H)_{qj}} \quad
+\subsection{Single-region demixing}
+The demixing problem of \eqref{eq-single} is separately convex in $\H$ and $\W$ (quadratic objective with linear constraints), but not jointly convex in both. When focusing on the first term, the problem at hand becomes equivalent to non-negative matrix factorization (NMF) \cite{leenmfs}. NMF has been intensively studied, with multiple approaches proposed to minimize the NMF objective. Here we tested four methods: Multiplicative updates (MU) \cite{leenmfs}, and three variants of alternative least square (ANLS) \cite{lin2007projected,kim2008activeset,kim2011fast}. 
+
+{\bf {Multiplicative updates (MU)}}. Lee and Seung \cite{leenmfs} described an NMF algorithm based on multiplicative updates of W and \Htext. At each step, each coordinate of \Htext{} (and of \W) is multiplied by a non-negative scalar guaranteeing that non-negativity is maintained. $H_{qj} \leftarrow H_{qj} \frac{(W^TX)_{qj}}{((W^TW)H)_{qj}} \quad
 \forall 1\leq q \leq k, 1\leq j \leq n$ and $W_{iq} \leftarrow W_{iq} \frac{(XH^T)_{iq}}{(W(HH^T))_{iq}} \quad \forall 1\leq i \leq m, 1\leq q \leq k$.
 This procedure is guaranteed to converge \cite{leenmfs,lin2007convergence}. 
 % They showed the objective after these updates is %non-increasing. Although in practice the %muliplcative-update method works well, it was suggest %by Gonzalez and Yin Zhang %\cite{gonzalez2005accelerating}  that the %non-increasing updates may not converge to a %stationary point within realistic time.
 
-{\bf{Alternating nonnegative least squares} (ANLS)} A second set of approaches to minimize the NMF objective is based on the fact that the optimization problem in \eqref{eq-single} is convex in each of the variables \W (or \Htext), hence one can iterate between efficiently updating $\W$ and updating $\H$. In ANLS, the two matrices are  repeatedly updated using $ W^{t+1} = \argmin_{W \geq 0 } f(W^t, H^t)$ and $H^{t+1} = \argmin_{H \geq 0 } f(W^{t+1},H^t)$. Several different method of solving non negative least squares (NNLS) have been proposed some especially tuned for NMF. \citet{lin2007projected} proposed projected gradient decent with step that is chosen using the Armijo rule. 
-Kim and park \cite{kim2008activeset,kim2011fast} use an active set method to solve NNLS. They swap variables between an active set and a passive set to find the optimal sets. The intuition behind this is that if the passive set (the strictly positive variables) was known in advanced then an NNLS problem is a simple unconstrained least squares. Another variant of this concept is done by the "the block pivoting method" which allows to change multiple variable between groups per iteration (as appose to a single variable using the active set method) \cite{kim2011fast}.
+{\bf{Alternating nonnegative least squares} (ANLS)} A second set of approaches to minimize the NMF objective is based on the fact that the optimization problem in \eqref{eq-single} is convex separately in $\W$ and $\H$, hence one can iterate between efficiently updating $\W$ and updating $\H$. In ANLS, the two matrices are  repeatedly updated using $ W^{t+1} = \argmin_{W \geq 0 } f(W^t, H^t)$ and $H^{t+1} = \argmin_{H \geq 0 } f(W^{t+1},H^t)$. Several variants of non negative least squares (NNLS) have been proposed, some tuned for NMF, and we tested three here.  (1) \citet{lin2007projected} proposed a {\em projected gradient} decent with step size chosen using Armijo rule. (2) Kim and park \cite{kim2008activeset,kim2011fast} use an {\em active set} method, swapping variables between an active set and a passive set to find the optimal sets. The intuition behind this is that if the passive set (the strictly positive variables) was known in advanced then an NNLS problem is a simple unconstrained least squares. (3) Another variant of this concept is the {\em block pivoting} method which allows to change multiple variable between groups per iteration (as appose to a single variable using the active set method) \cite{kim2011fast}.
 
 In \eqref{eq-single} the rows of $\W$ are constrained to sum to one. This constraint is often relaxed during optimization. In practice, it is often replaced with a simple heuristic of normalizing each row of W after the optimization is completed. 
 
-The above discussion focused on the first term in \eqref{eq-single}, omitting the prior term. Using the fact that we alternate between $\W$ and $\H$ the priors can be elegantly added by a simple transformation. Each time before we solve the minimization problem for H we perform:
-$ X_{priors} = \Big[ X ;\Sigma^{-\frac{1}{2}} \Big]  $  ,  $ \W_{priors} = \Big[  \W ; \Sigma^{-\frac{1}{2}} M \Big]  $. We then find the minimum for $H$ using $X_{priors} $ and $W_{priors} $. 
+The above discussion focused on the first term in \eqref{eq-single}, omitting the prior term. Using the fact that we alternate between $\W$ and $\H$ the priors can be elegantly added by a simple transformation. At every iteration solving for $\H$ we perform: 
+$ X_{priors} = \Big[ X ;\Sigma^{-\frac{1}{2}} \Big] $  ,  $ \W_{priors} = \Big[  \W ; \Sigma^{-\frac{1}{2}} M \Big]  $. We then find the minimum for $H$ using $X_{priors} $ and $W_{priors} $. 
 
 \subsection{Multi-region demixing}
 % ----------------------------------
@@ -216,9 +210,6 @@ Algorithm (1) describes our training procedure.
 \end{algorithmic}
 \end{algorithm}
 
-
-
-
 % ==========================================
 \section{Related methods}
 Demixing of transcriptome measurements into cell-type specific profiles has been mostly applied when a set of ground-truth underlying factors is known. \citet{shen2010cell} described demixing of 
@@ -226,68 +217,64 @@ whole-blood gene expression datasets from kidney transplants. \citet{grange2014c
 
 Joint non negative matrix factorization of several matrices has been previously studied by \citet{lee2009group}. Their formulation introduced  both attractive and repulsive pairwise potentials, optimized using multiplicative updates. A Bayesian group factorization model was presented in \citet{shin2012bayesian}. Somewhat related, is the work by \citet{wang2012group}, who studied matrix factorization where some factors are shared across matrices.
 
-
-
 % ==========================================
 \section{Controlled experiments}
 \label{Synthetic_exp}
-With the goal of finding the regime of hyper parameters and optimization techniques where multi-region demixing works best , we start with a series of experiment where we mixed known expression profiles in a controlled way. This allowed us to solve multi-region demixing in a settings where the latent factors are known and used as a ground truth. We first describe how the dataset was created and then characterize how performance depends on the number of samples and the number of latent factors (cell types).
+With the goal of finding the hyper parameters and optimization techniques where multi-region demixing works best, we conduct a series of experiment where we mixed known expression profiles in a controlled way. This allowed us to evaluate multi-region demixing with known latent factors used as a ground truth. We first describe how the dataset was created and then characterize how performance depends on the number of samples and the number of latent factors (cell types).
 
 \subsection{Creating the mixture dataset}
-\vspace{-10pt}
+\vspace{-5pt}
 We created controlled mixtures from a set of real transcriptome measurements, measured using microarrays from isolated cells. \citet{okaty2011cell} collected 195 cell-type-specific profiles from 64 cell types spanning multiple regions and layers of the mouse brain. These profiles were previously measured after isolating cell using various techniques (FACS, LMD). Although our goal is to use this method on RNA sequencing data which is more quantitative, there is yet no dataset that preformed RNA sequencing of single cell type from multiple brain regions. So to validate our method on controlled set we use microarray data.
- 
-Specifically, we create known latent factors from expression profiles of the 3 major population of cell types in the brain: neurons, astrocytes and oligodendrocytes, each represented by 14580 genes. Profiles were extracted from 7 brain regions used in \citet{doyle2008}:  cortex layer 5A, cortex layer 5B, cortex layer 6, striatum, cerebellum, brainstem and the spinal cord. For each of these region, we also found the proportions of the three cell types reported in the literature \cite{Herculano2014}. (cortex:  0.7,0.1,0.2 for neuron, astrocytes, oligodendrocytes; cerebellum: 0.5,0.15,0.35, other: 0.65,0.1,0.25). To draw a mixture sample, we drew proportion values $p_{neuron},p_{astro},p_{oligo}$ by adding multiplicative noise to the literature proportions. Each proportion was multiplied by a random value in [0,1] and scaled back to a  sum of 1. Finally, we added multiplicative Gaussian noise to the expression level of all genes, of the form $N(1,\xi^2)$, with noise levels of $\xi=10\%$.
 
+Specifically, we create known latent factors from expression profiles of the 3 major population of cell types in the brain: neurons, astrocytes and oligodendrocytes, each represented by 14580 genes. Profiles were extracted from 7 brain regions used in \citet{doyle2008}:  cortex layer 5A, cortex layer 5B, cortex layer 6, striatum, cerebellum, brainstem and the spinal cord. For each of these region, we also found the proportions of the three cell types reported in the literature \cite{Herculano2014}. (cortex:  0.7,0.1,0.2 for neuron, astrocytes, oligodendrocytes; cerebellum: 0.5,0.15,0.35, other: 0.65,0.1,0.25). To draw a mixture sample, we drew proportion values $p_{neuron},p_{astro},p_{oligo}$ by adding multiplicative noise to the literature proportions. Each proportion was multiplied by a random value in [0,1] and scaled back to a  sum of 1. Finally, we added multiplicative Gaussian noise to the expression level of all genes, of the form $N(1,\xi^2)$, with noise levels of $\xi=10\%$.
 %We then used the known mixtures to test the quality of reconstructed profiles as a function of number of samples, noise level, number of factors, and the optimization algorithm. 
 
-
 \subsection{Evaluation criteria}
-\vspace{-10pt}
+\vspace{-5pt}
 We evaluated the quality of a demixing method by computing the fraction of expression variance that it explains. The unexplained (residual) variance is computed as $1-\rho^2$, where $\rho$ is the spearman correlation between the predicted profile and the ground truth profile.
 
 When predicting profile of multiple cell types (like neurons, astrocytes and oligodendrocytes), we first match each the three inferred profiles to the three ground truth profiles, such that the sum of their three spearman correlations is maximized. This little maximization search may introduce a positive bias. To correct for this bias, we compute the following bootstrap baseline. Three expression samples are drawn randomly from the set of samples, the triplet is matched to the ground truth, and its median spearman correlation is computed. This process was repeated 100 times to give a bootstrap estimate. 
 
 \subsection{Comparing optimization methods for single region NMF}
-\vspace{-10pt}
+\vspace{-5pt}
 The NMF optimization problem is non convex, hence different optimization techniques often reach different local minima even when initialized using the same starting points. These performance differences can result from the optimization procedure (MU or ANLS) or from stopping conditions and convergence rates. Figure \ref{fig:controlled_exp}(a) compares the performance of 4 optimization algorithms on expression profiles from a single region (cortex layer 5). 
 
 All four methods improve with the number of samples, and saturate near 50 samples. For small number of samples, the block-pivoting and the active-set performed slightly better than other approaches, and almost identical to each other (their graph overlaps). We concluded that active-set ANLS is our method of choice.
 
 \subsection{Tuning the strength of pairwise attractive potential}
 \vspace{-10pt}
-Next, we applied multi-region demixing (Algorithm 1) to the controlled data mix described above, and tested its accuracy as a function of the global hyperparameter $\lambda$ controlling the strength of attraction among region pairs. Figure 2B shows that in the regime of small sample size, which is relevant to the brain datasets we work with, there is sweet spot where $\lambda=0.1$ outperforms extreme values of $\lambda$. Specifically, both the case of $\lambda=0$ (no sharing, demixing each region individually) and the case of $\lambda \gg0$ (maximum sharing, brain as a single homogeneous region) performed much worse. This suggests that the soft sharing of regio profiles is beneficial in this data.  
+Next, we applied multi-region demixing (Algorithm 1) to the controlled data mix described above, and tested its accuracy as a function of the global hyperparameter $\lambda$ controlling the strength of attraction among region pairs. Figure 2B shows that in the regime of small sample size, which is relevant to the brain datasets we work with, there is sweet spot where $\lambda=0.1$ outperforms extreme values of $\lambda$. Specifically, both the case of $\lambda=0$ (no sharing, demixing each region individually) and the case of $\lambda \gg0$ (maximum sharing, brain as a single homogeneous region) performed much worse. This suggests that the soft sharing of region profiles is beneficial in this data.  
 
-As the number of samples increases the benefit of sharing across regions diminishes (Figure \ref{fig:controlled_exp}(b)), and with enough samples per region solving the individual problems performs almost just as well. 
+As the number of samples increases the benefit of sharing across regions diminishes (Figure \ref{fig:controlled_exp}(b)), and with enough samples per region solving the individual problems performs almost just as well.
 
-Finally, \ref{fig:controlled_exp}(c) shows the unexplained variance as a function of $\lambda$ for 3 to 5 latent factors (cell types). As the number of types increases, the models are richer and could in theory fit the data better (due to the bias discussed in the evaluation criteria section above). However, this effect does not seem to be significant in this data.  Instead, it seems that the multi-region demixing recovered the three original profiles and some other vectors which helped to lower the overall fit but not the correlation to the original profiles. 
+Figure \ref{fig:controlled_exp}(c) shows the unexplained variance as a function of $\lambda$ for 3 to 5 latent factors (cell types). As the number of types increases, the models are richer and could in theory fit the data better (due to the bias discussed in the evaluation criteria section above). However, this effect does not seem to be significant in this data.  Instead, it seems that the multi-region demixing recovered the three original profiles and some other vectors which helped to lower the overall fit but not the correlation to the original profiles. 
 \begin{figure}[!hbt]
    (a) \hspace{120pt}(b) \hspace{120pt}(c) \hspace{190pt}
    \centering
-     \includegraphics[width=0.32\textwidth]{methods}
-     \includegraphics[width=0.32\textwidth]{lambda_samples}
-     \includegraphics[width=0.32\textwidth]{num_types}
+     \includegraphics[width=0.32\textwidth]{methods_new}
+     \includegraphics[width=0.32\textwidth]{num_samps_new}
+     \includegraphics[width=0.32\textwidth]{num_types_new}
     \caption{Controlled experiments. 
     {\bf{(a)}} Single-region optimization methods improve with increasing samples size. The {\em active set} approach and the {\em block pivoting} outperformed other methods, particularly with few samples. {\bf{(b)}} Soft-sharing of latent factors lead to improved reconstruction in the 7-region settings, particularly with few samples. Results are shown for optimizing with 7 brain regions. {\bf{(c)}} Reconstruction using more cell types then needed does not improve the results.} 
     \label{fig:controlled_exp}
 \end{figure}
-
-We found that the use of priors was somewhat fragile. While prior that were taken from the same experiment helped to imporve the score, priors of the same cell type just gathered in different experiments lowered our demixing success. 
+Finally, we tested the effect of priors on prediction quality. We found priors improved predictions only when taken from the same experiment, but hurt predictions when we used expression profile collected from related cells from different experiments. 
 
 % ==========================================
 \section{Experiments with postmortem human brain expression}
 \label{Human_exp}
-We turn to analyze real mixtures collected using RNA-seq measurements from postmortem human brains. We used data from brainspan \cite{brainspan} (\url{http://www.brainspan.org/} and limited analysis to donors older than 17 years, leaving 8 adult human donors. We therefore had eight samples from each brain region. Each expression profile is represented by a vector of 52376 measurements including transcripts counts for coding and non-coding sequences. 
+We turn to analyze real mixtures collected using RNA-seq measurements from postmortem human brains. We used data from brainspan \cite{brainspan} %(\url{http://www.brainspan.org/} 
+and limited analysis to donors older than 17 years, yielding 8 adult human donors. We therefore had eight samples from each brain region. Each expression profile is represented by a vector of 52376 measurements including transcript counts for coding and for non-coding sequences.
 
-RNA sequencing is becoming the main way to measure gene expression in tissues, replacing the older microarrays technology. RNA sequencing provides more quantitative measurement since it actually counts the number of RNA transcripts in a tissue, as opposed to the more qualitative microarrays measurements. As such, RNA-seq data is more suitable for demixing since the number of RNAs transcripts grows linearly with the proportion of corresponding cells in the tissue.
+RNA sequencing is becoming the main way to measure gene expression in tissues, replacing the older microarrays technology. It provides quantitative counts of the number of RNA transcripts in a tissue samples, as opposed to the more qualitative microarrays measurements. As such, RNA-seq data is more suitable for demixing since the number of RNAs transcripts grows linearly with the proportion of corresponding cells in the tissue.
 
-To evaluate the quality of demixing, we compare the inferred hidden cell-type specific profiles to transcriptome profiles measured in population of cells sorted by their cell type. At the time we conducted the analysis the cell-type specific RNA-seq data were only available in mouse \cite{barres2014}. We mapped the genes in the human to their orthologs in mouse and computed the spearman correlation between the reconstructed profiles and each of the single cell profiles. Recently such cell-type-specific data was made available for human, which will allow us to perform better validations. 
+To evaluate the quality of demixing, we compare the inferred hidden cell-type specific profiles to transcriptome profiles measured in population of cells sorted by their cell type. At the time we conducted the analysis the cell-type specific RNA-seq data were only available in mouse \cite{barres2014}. We mapped the genes in the human to their orthologs in mouse and computed the spearman correlation between the reconstructed profiles and each of the single cell profiles. Recently such cell-type-specific data was made available for human, which will allow us to perform better validations \cite{darmanis2015survey}. 
 
 We determined the strengths of region-to-region relatedness $\phi_{r,s}$ based on the brain-region-ontology described in Figure \ref{fig:bro}. To verify that the human transcriptome measurements agree with this ontology, we first used an agglomerate hierarchical clustering over regions, by clustering expression profiles of these regions collected using microarray data by \cite{kang2011spatio}. The resulting region hierarchy had very strong agreement with the brain region ontology, consistent with previous reports that adult expression patterns reflect brain development \cite{zapala2005}. The strengths of region-to-region attractive potentials $\lambda_{r,s}$ was determined as $\lambda \phi_{r,s}$ where $\lambda$ is a hyper parameter controlling the overall weight of edge potentials. 
 
 Figure 3 shows the residual variance computed based on a spearman correlation between the predicted and ground truth profiles, for three cell types and 5 brain regions (see section 5.2 for evaluation procedure). We selected the 5 brain regions by selecting 3 subcortical regions and 2 cortical regions that were most remote (dorsolateral prefrontal cortex and primary visual cortex).
 
-At the optimal predicted expression profiles, the residual unexplained variance is reduced by 7\% for neurons, 8\% for astrocytes and 5\% in oligodendrocytes, going down to $35\%$ unexplained variance for neurons. These results were highly significant statistcially ($p$-value < $10^{-5}$) when compared to the bootstrap baseline. To get a scale of these numbers, we computed the correlation between expression profiles of isolated cortical neurons, measured by different labs and avialble through the dataset of \cite{okaty2011cell}. The median spearman correlation across these profiles was ~0.87, or 25\% unexplained variance. It is to be expected that the correlation with human brain profiles would be even lower. This suggests that the reduction of the unexplained variance achieved here maybe already be suffering from a ceiling effect.
+At the optimal predicted expression profiles, the residual unexplained variance is reduced by 7\% for neurons, 8\% for astrocytes and 5\% in oligodendrocytes, going down to $35\%$ unexplained variance for neurons. These results were highly significant statistically ($p$-value < $10^{-5}$) when compared to the bootstrap baseline. To get a scale of these numbers, we computed the correlation between expression profiles of isolated cortical neurons, measured by different labs and available through the dataset of \cite{okaty2011cell}. The median spearman correlation across these profiles was ~0.87, or 25\% unexplained variance. It is to be expected that the correlation with human brain profiles would be even lower. This suggests that the reduction of the unexplained variance achieved here maybe already be suffering from a ceiling effect.
 
 \begin{figure}[!hbt]
     \label{fig:human}
@@ -297,11 +284,6 @@ At the optimal predicted expression profiles, the residual unexplained variance 
      \caption{Demixing RNA-seq data from 5 human brain regions \cite{brainspan}. Blue curve and squares correspond to the residual variance $(1-\rho^2)$ as a function of the strength of attractive region-to-region potentials $\lambda$. Red dashed line corresponds to a best-matched samples baseline (Sec 5.2).}
     
 \end{figure}
-
-
-% [Add in the human experiment section We first verified that the brain regions in our data agree with the dev ontology: we clustered the brain regions in a hierarchical way and compared the resulting hierarchy to the dev ontology. We obtained very strong agreement …]. 
-
-
 
 
 % ==========================================
