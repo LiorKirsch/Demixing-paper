@@ -56,7 +56,7 @@ We assume that expression profiles of an each cell type can vary from one region
 To capture these relations our model introduces pair-wise attractive potentials between the cell-type profile in one region $\c^r_k$ to the profile of the same cell type in another region $\c^s_k$. The strength of the attraction depends on the relatedness $\phi_{r,s}$ of two brain regions, and on a global hyper parameter that controls the relative weight of edge potentials compared with node potentials. Together, this yields pairwise potential terms of the form 
 $\lambda \phi_{r,s}|| \c^r_k - \c^s_k||^2$.
 
-This soft-sharing approach can be seen as a balance between two extremes. At one extreme (no pairwise attraction, $\lambda=0$), demixing of each regions is trained independently. With current datasets, this approach usually has too few samples per regions.  At the other extreme (strong pairwise attraction, $\lambda \gg 0$), one could treat all samples as being created from a single set of underlying latent factors, as if all brain regions share a single expression profiles per cell-type. In this case, more samples are available for estimating the (fewer) latent factors, but the wrong assumes that expression is homogeneous across the brain   distorts the resulting profiles. Our soft-sharing approach bridges the two extremes by controlling how profiles of different regions share common traits. Similar soft sharing has often been used in supervised multi-task learning (MTL). 
+This soft-sharing approach can be seen as a balance between two extremes. At one extreme (no pairwise attraction, $\lambda=0$), demixing of each regions is trained independently. With current datasets, this approach usually has too few samples per regions.  At the other extreme (strong pairwise attraction, $\lambda \gg 0$), one could treat all samples as being created from a single set of underlying latent factors, as if all brain regions share a single expression profiles per cell-type. In this case, more samples are available for estimating the (fewer) latent factors, but the wrong assumes that expression is homogeneous across the brain   distorts the resulting profiles. Our soft-sharing approach bridges the two extremes by controlling how profiles of different regions share common traits. Similar soft sharing has often been used in supervised multi-task learning. 
 
 Formally, given sets of samples from $R$ regions ${\cal{X}} = \{X^1,\ldots, X^R\}$, where $X^r = \{\x^r_1, \ldots, \x^r_{n_r} \}$, we learn $R$ sets of hidden cell-type-specific profiles ${\cal{\H}} = \{\H^1,\ldots, \H^R\}$ and their corresponding proportions ${\cal{W}} = \{ W^1,\ldots W^R\}$. Adding Gaussian potentials over cell-type profiles from a pair of regions ($\H^r$, $\H^s$) with a weight of $\lambda_{r,s}$ amounts to a quadratic term in the log posterior. This therefore yields the following optimization problem
 \begin{equation}
@@ -72,7 +72,7 @@ Formally, given sets of samples from $R$ regions ${\cal{X}} = \{X^1,\ldots, X^R\
         & & & \sum_j W^r_{l,j} = 1 \;\; \forall l,r \;. 
     \end{aligned}
 \end{equation}
-Once again the constraints on $\W$ are since these are the mixture proportions, and the constraints on all $\H$ reflecrt the fact that $\H$ holds counts of transcripts.
+Once again the constraints on $\W$ are since these are the mixture proportions, and the constraints on all $\H$ reflect the fact that $\H$ holds counts of transcripts.
 
 The proposed model is interestingly related to Markov random fields (MRFs). Consider a case where the mixture proportions $\cal{W}$ are given, then the probabilistic model over $\cal{\H}$ can be viewed as an MRF, where nodes correspond to the profiles of individual cell types across all regions $\c^1_1,\ldots, \c^r_k, \ldots \c^R_K$, node potentials reflect the priors $p_0(\c_k)$ based on known expression of individual cell types at various regions, and edge potentials reflect region-to-region similarity terms $\lambda \phi_{r,s}|| \c^r_k - \c^s_k||^2$. 
 
@@ -93,16 +93,15 @@ The demixing problem of \eqref{eq-single} is separately convex in $\H$ and $\W$ 
 % In the section:
 % Convergence properties of sparse NMF algorithms
 % http://www.sciencedirect.com/science/article/pii/S0167637799000747#
-Here we tested four methods: Multiplicative updates (MU) \cite{leenmfs}, and three variants of alternative least square (ALS) \cite{lin2007projected,kim2008activeset,kim2011fast}. 
+Here we tested four methods: Multiplicative updates (MU) \cite{leenmfs}, and three variants of alternative least square (ANLS) \cite{lin2007projected,kim2008activeset,kim2011fast}. 
 
-{\bf {Multiplicative updates (MU)}}. Lee and Seung \cite{leenmfs} described an NMF algorithm based on multiplicative updates of W and \Htext. At each step, each coordinate of \Htext (and \W) is multiplied by a non-negative scalar, which gaurantees that non-negativity is maintained: $H_{qj} \leftarrow H_{qj} \frac{(W^TX)_{qj}}{((W^TW)H)_{qj}} \quad
+{\bf {Multiplicative updates (MU)}}. Lee and Seung \cite{leenmfs} described an NMF algorithm based on multiplicative updates of W and \Htext. At each step, each coordinate of \Htext (and \W) is multiplied by a non-negative scalar, which guarantees that non-negativity is maintained: $H_{qj} \leftarrow H_{qj} \frac{(W^TX)_{qj}}{((W^TW)H)_{qj}} \quad
 \forall 1\leq q \leq k, 1\leq j \leq n$ and $W_{iq} \leftarrow W_{iq} \frac{(XH^T)_{iq}}{(W(HH^T))_{iq}} \quad \forall 1\leq i \leq m, 1\leq q \leq k$.
 This procedure is guaranteed to converge \cite{leenmfs,lin2007convergence}. 
 % They showed the objective after these updates is %non-increasing. Although in practice the %muliplcative-update method works well, it was suggest %by Gonzalez and Yin Zhang %\cite{gonzalez2005accelerating}  that the %non-increasing updates may not converge to a %stationary point within realistic time.
 
-{\bf{Alternating least squares} (ALS)} A second set of approaches to minimize the NMF objective is based on the fact that the optimization problem in \eqref{eq-single} is convex in each of the variables \W (or \Htext), hence one can iterate between efficiently updating $\W$ and updating $\H$. This approach can be viewed as a block-coordinate minimization approach. In ALS, the two matrices are  repeatedly updated using $ W^{t+1} = \argmin_{W \geq 0 } f(W^t, H^t)$ and $H^{t+1} = \argmin_{H \geq 0 } f(W^{t+1},H^t)$. Several different method of solving non negative least squares (NNLS) have been proposed some especially tuned for NMF. \citet{lin2007projected} proposed projected gradient decent with step that is chosen using the Armijo rule. 
-Kim and park \cite{kim2008activeset,kim2011fast} use an active set method to solve NNLS. They group their variables to an active set and a passive set and 
-exchange variables between the two to find the optimal sets. Variables are added to the passive set (the set of strictly positive variables) if they improve the score. Notice that if the passive set was known in advance, then an NNLS problem is a simple unconstrained least squares. Another variant of this concept is done by the "the block pivoting method" which allows to change multiple variable between groups per iteration (as appose to a single variable using the active set method) \cite{kim2011fast}. {\bf{THE ALS SECTION SHOULD BE MUCH SHORTER}}
+{\bf{Alternating nonnegative least squares} (ANLS)} A second set of approaches to minimize the NMF objective is based on the fact that the optimization problem in \eqref{eq-single} is convex in each of the variables \W (or \Htext), hence one can iterate between efficiently updating $\W$ and updating $\H$. In ANLS, the two matrices are  repeatedly updated using $ W^{t+1} = \argmin_{W \geq 0 } f(W^t, H^t)$ and $H^{t+1} = \argmin_{H \geq 0 } f(W^{t+1},H^t)$. Several different method of solving non negative least squares (NNLS) have been proposed some especially tuned for NMF. \citet{lin2007projected} proposed projected gradient decent with step that is chosen using the Armijo rule. 
+Kim and park \cite{kim2008activeset,kim2011fast} use an active set method to solve NNLS. They swap variables between an active set and a passive set to find the optimal sets. The intuition behind this is that if the passive set (the strictly positive variables) was known in advanced then an NNLS problem is a simple unconstrained least squares. Another variant of this concept is done by the "the block pivoting method" which allows to change multiple variable between groups per iteration (as appose to a single variable using the active set method) \cite{kim2011fast}. {\bf{THE ANLS SECTION SHOULD BE MUCH SHORTER}}
 
 In \eqref{eq-single} the rows of $\W$ are constrained to sum to one. This constraint is often relaxed during optimization. In practice, it is often replaced with a simple heuristic of normalizing each row of W after the optimization is completed. 
 
@@ -113,12 +112,12 @@ $ X_{priors} = \Big[ X ;\Sigma^{-\frac{1}{2}} \Big]  $  ,  $ \W_{priors} = \Big[
 
 \subsection{Multi-region demixing}
 % ----------------------------------
-The multi-region demixing model of \eqref{eq-multi} defines a jount optimization problem over all cell-type profiles $\cal{\H}$ and their proportions across all regions $\cal{\W}$.
+The multi-region demixing model of \eqref{eq-multi} defines a joint optimization problem over all cell-type profiles $\cal{\H}$ and their proportions across all regions $\cal{\W}$.
 
 Given values for the hyper parameters $\lambda$, $\sigma^r$ and $\phi_{r,s}$, 
-we optimize \eqref{eq-multi} by extending the alternating least square (ALS) approach, this time solving separately for ${\H^r}$ and ${\W^r}$ of each region given all the other regions. This approach has similar convergence guarantees as the original ALS approach.  {\bf{ LIOR CAN YOU SPECIFY? AND ADD A REF}}
+we optimize \eqref{eq-multi} by extending the alternating nonnegative least square (ANLS) approach, this time solving separately for ${\H^r}$ and ${\W^r}$ of each region given all the other regions. %This approach has similar convergence guarantees as the original ANLS approach.  {\bf{ LIOR CAN YOU SPECIFY? AND ADD A REF}}
 
-We initialize $\W^r$ with values in the range [0,1] and initialize $\H^r$ by random data samples with multiplicative noise. In practice, we found that it helped to start optimization by solving for each region separately, alternating over $\H$ and $\W$ for that region. We believe that this helped the profiles to more easily reconstruct their own unique profile. This 'warm-start' was then used to initialize the global ALS optimization. 
+We initialize $\W^r$ with values in the range [0,1] and initialize $\H^r$ by random data samples with multiplicative noise. In practice, we found that it helped to start optimization by solving for each region separately, alternating over $\H$ and $\W$ for that region. We believe that this helped the profiles to more easily reconstruct their own unique profile. This 'warm-start' was then used to initialize the global ANLS optimization. 
 % We have also experimented with a few method to enforce the constrains on the proportion matrix. while some s%%Then prior to starting the loop, we warm initialize the profiles by performing a single step of block coordinate decent for each ($H^r,W^r$).
 
 The values of the hyper parameters $\lambda$ and $\sigma^r$ can be found using cross validation. However, searching over all pairwise weights $\phi_{r,s}$ maybe prohibitive. We therefore used prior knowledge to determine the values of $\phi_{r,s}$. The strength of these hyper parameters reflects our prior belief on how strongly cell-type specific expression should be similar in two given regions, like the the expected similarity of a cortical to a hippocampal neuron.
@@ -126,7 +125,7 @@ To determine the values of $\phi_{r,s}$, we used a brain region hierarchy develo
 %Specifically, at stage $t+1$ we update the profile matrix of %region r$ \H_r^{t+1} $ using the related profiles as priors.
 %For the regularize parameters we use a base $\lambda$ times a distance factor between pairs of regions. 
 
-Algorithm (1) desribes our training procedure.
+Algorithm (1) describes our training procedure.
 
 \begin{algorithm}[tbh]
    \caption{Multi-region demixing}
@@ -138,13 +137,14 @@ Algorithm (1) desribes our training procedure.
    %\REPEAT
    \STATE {\bfseries warm-start:} for every region $r$ 
    \STATE \quad Find optimal $\W^r$ and $\H^r$ for the single-region objective \eqref{eq-single}
-   \STATE \quad $H^r = \argmin_{H \geq 0 } \| X^r - W^rH\|^2_F +  \sigma^r \| M^r - \H \|^2_{(\Sigma^{-1})} $
-   \STATE \quad $ W^r = \argmin_{W \geq 0} \| X^r - WH^r\|^2_F $
+%   \STATE \quad $H^r = \argmin_{H \geq 0 } \| X^r - W^rH\|^2_F +  \sigma^r \| M^r - \H \|^2_{(\Sigma^{-1})} $
+ %  \STATE \quad $ W^r = \argmin_{W \geq 0} \| X^r - WH^r\|^2_F $
    \REPEAT
-   \STATE Select a region $r$ from a predefined random permutation.
-   \STATE Find optimal $\W^r$ and $\H^r$ for the multi-region objective \eqref{eq-multi} using the rest of the regions as priors.
-   \STATE  $H^r = \argmin_{H \geq 0 } \| X^r - W^rH\|^2_F + \sum_{r \neq s} \lambda \phi_{r , s} \| \H - \H^s \|_F^2  + \sigma^r \| M^r - \H \|^2_{(\Sigma^{-1})} $
-   \STATE  $ W^r = \argmin_{W \geq 0} \| X^r - WH^r\|^2_F $
+   \STATE Randomly permute the order of the regions.
+   \STATE Iterate over the permuted regions list and select a region $r$.
+   \STATE \quad Find optimal $\W^r$ , $\H^r$ for the multi-region objective \eqref{eq-multi} use other regions as priors.
+   \STATE \quad $H^r = \argmin_{H \geq 0 } \| X^r - W^rH\|^2_F + \sigma^r \| M^r - \H \|^2_{(\Sigma^{-1})} + \sum_{r \neq s} \lambda \phi_{r , s} \| \H - \H^s \|_F^2  $
+   \STATE \quad $ W^r = \argmin_{W \geq 0} \| X^r - WH^r\|^2_F $
    \UNTIL{stopping condition}
 \end{algorithmic}
 \end{algorithm}
